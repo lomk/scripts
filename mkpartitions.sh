@@ -5,7 +5,7 @@ SIZE="small"
 USERNAME="imaterinko"
 
 make_small_disk () {
-echo "mk_small_disk"
+echo "make small disk"
 	disk=$1
 	parted -s $disk mklabel gpt 
     parted -s $disk mkpart primary 1049kB 2097kB
@@ -16,7 +16,7 @@ echo "mk_small_disk"
 }
 
 make_big_disk () {
-	echo "mkbigdisk"
+	echo "make big disk"
 	disk=$1
 	parted -s $disk mklabel gpt 
     parted -s $disk mkpart primary 1049kB 2097kB
@@ -33,17 +33,16 @@ make_small_raid () {
 }
 
 make_big_raid () {
-	echo "mkbigraid"
+	echo "make big raid"
 	mdadm --create --metadata=1.2 --level=1 --raid-devices=2 /dev/md0 "${1}2" "${2}2"
 	mdadm --create --metadata=1.2 --level=1 --raid-devices=2 /dev/md1 "${1}3" "${2}3"
 	make_big_fs
 }
 
 make_small_fs () {
-	echo "mksmallfs"
+	echo "make small fs"
 	mkfs -t ext4 -L rootfs /dev/md0
 	mkswap -L swap00 /dev/md1
-
 }
 
 make_big_fs () {
@@ -80,19 +79,18 @@ replace_all () {
 EOF
 }
 
-
 if [[ $RAID == "1" ]];
     then
-    echo "Enter first disk path:"
-    read DISK
+        echo "Enter disk path:"
+        read DISK
 
     if [[ $SIZE == "BIG" ]];
     then
 	    make_big_disk $DISK
 	    make_big_fs
     else
-	    mk_small_disk $DISK
-	    mk_small_fs
+	    make_small_disk $DISK
+	    make_small_fs
     fi
 else
     echo "Enter first disk path:"
@@ -117,7 +115,6 @@ mount LABEL=rootfs /mnt/
 df -h
 mdadm --examine --scan
 
-
 ssh ${USERNAME}@eu5.wormax.io "sudo tar --sparse --one-file-system -C / -czf - ." | tar -C /mnt/ -xzf - .
 
 mount --bind /dev /mnt/dev
@@ -134,5 +131,5 @@ umount --bind /dev/pts /mnt/dev/pts
 umount --bind /sys /mnt/sys
 umount --bind /proc /mnt/proc
 
-#reboot
+reboot
 
