@@ -4,7 +4,7 @@ username="imaterinko"
 
 
 
-ssh eu5.wormax.io “tar --sparse --one-file-system -C / -czf - .” | tar -C /mnt/ -xzf - .
+ssh eu5.wormax.io "tar --sparse --one-file-system -C / -czf - ." | tar -C /mnt/ -xzf - .
 
 mount --bind /dev /mnt/dev
 mount --bind /dev/pts /mnt/dev/pts
