@@ -1,8 +1,8 @@
 #!/bin/bash
 
 raid=$(lspci -vv | grep -i raid)
-disks=($(fdisk -l | grep -E -i "disk.*dev" | awk 'gsub(/:/,""){print $2}'))
-size=$(fdisk ${disks[0]}-l | awk '/^Disk \/dev/ {print $5}')
+disks=($(fdisk -l |grep -v "loop" | grep -E -i "disk.*dev" | awk 'gsub(/:/,""){print $2}'))
+size=$(fdisk ${disks[0]} -l | awk '/^Disk \/dev/ {print $5}')
 
 
 make_small_disk () {
@@ -46,22 +46,20 @@ replace_all () {
     sed -i -e /ARRAY/d /etc/mdadm/mdadm.conf
     mdadm --examine --scan >> /etc/mdadm/mdadm.conf
 
-    netfile="/etc/network/interfaces"
-    netcardsfile="/etc/udev/rules.d/70-persistent-net.rules"
+
     extif=$(ip route show | awk '/default/{print $5}')
     newaddr=$(ifconfig $extif | awk -F ' *|:' '/inet addr/{print $4}')
     newmac=$(ifconfig $extif | awk '/HWaddr/{print $5}')
     newmask=$(ifconfig $extif | awk -F ' *|:' '/inet addr/{print $8}')
     newgw=$(ip route show | awk '/default/{print $3}')
 
-    sed -i "/iface $extif/!b;:x;n;s/address.*/address $newaddr/;t;/iface/b;bx" $netfile
-    sed -i "/iface $extif/!b;:x;n;s/netmask.*/netmask $newmask/;t;/iface/b;bx" $netfile
-    sed -i "/iface $extif/!b;:x;n;s/gateway.*/gateway $newgw/;t;/iface/b;bx" $netfile
-    sed -E -i "/eth0/s/[0-9a-fA-F:]{17}/$newmac/" $netcardfile
+    sed -i "/iface eth0/!b;:x;n;s/address.*/address $newaddr/;t;/iface/b;bx" /etc/network/interfaces
+    sed -i "/iface eth0/!b;:x;n;s/netmask.*/netmask $newmask/;t;/iface/b;bx" /etc/network/interfaces
+    sed -i "/iface eth0/!b;:x;n;s/gateway.*/gateway $newgw/;t;/iface/b;bx" /etc/network/interfaces
+    sed -E -i "/eth0/s/[0-9a-fA-F:]{17}/$newmac/" /etc/udev/rules.d/70-persistent-net.rules
 
     update-initramfs -u -v -k 3.13.0-93-generic
-    disks=($(fdisk -l | grep -E -i "disk.*dev" | awk 'gsub(/:/,""){print $2}'))
-    for i in "${disks[@]}"
+    for i in $(fdisk -l | grep -E -i "disk.*dev" | awk 'gsub(/:/,""){print $2}')
     do
         grub-install --recheck $i
         update-grub
@@ -102,9 +100,11 @@ fi
 
 mount LABEL=rootfs /mnt/
 
-echo "Enter ssh user to connect:"
+echo "Enter ssh user to connect server:"
 read username
-ssh ${username}@eu5.wormax.io "sudo tar --sparse --one-file-system -C / -czf - ." | tar -C /mnt/ -xzf - .
+echo "Enter server nem or IP:"
+read servername
+ssh ${username}@${servername} "sudo tar --sparse --one-file-system -C / -czf - ." | tar -C /mnt/ -xzf - .
 
 mount --bind /dev /mnt/dev
 mount --bind /dev/pts /mnt/dev/pts
@@ -113,10 +113,10 @@ mount --bind /proc /mnt/proc
 
 replace_all
 
-umount --bind /dev /mnt/dev
-umount --bind /dev/pts /mnt/dev/pts
-umount --bind /sys /mnt/sys
-umount --bind /proc /mnt/proc
+#umount /mnt/dev/pts
+#umount /mnt/dev
+#umount /mnt/sys
+#umount /mnt/proc
 
-reboot
+#reboot
 
